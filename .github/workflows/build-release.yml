@@ -58,12 +58,13 @@ jobs:
       - name: install wine
         id: wine_install
         run: |
-          sudo apt install wine64
+          sudo apt update
+          sudo apt -y install wine64
           echo "WINE_PATH=$(which wine64)" >> $GITHUB_OUTPUT
       - name: install binutils
         id: binutils_install
         run: |
-          sudo apt install binutils
+          sudo apt -y install binutils
       - name: export with Godot Engine and release on GitHub
         id: export_game
         uses: The-Water-Museum/godot-export@v4.6.0
