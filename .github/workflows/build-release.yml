@@ -67,9 +67,9 @@ jobs:
           sudo apt -y install binutils
       - name: install osxcross
         id: osxcross_install
-        uses: The-Water-Museum/setup-osxcross@c661039fc1637b44542962087273943c0b9f2ab3
+        uses: The-Water-Museum/setup-osxcross@003cf57fd1b3c33c4dc038cb51dc3822f254da1e
         with:
-          osx-version: "13.1"
+          osx-version: "13.0"
           sdk-url: "https://cdn.ctis.me/file/ctisme-cdn/files-pub/ext/water-museum/macos-sdk"
       - name: export with Godot Engine and release on GitHub
         id: export_game
