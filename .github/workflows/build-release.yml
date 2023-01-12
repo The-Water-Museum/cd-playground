@@ -1,78 +1,40 @@
-name: build and release
+name: Build and Release Game
 
 on:
-  workflow_dispatch:
-    branches:
-      - main
-    paths-ignore:
-      - '.**'
-      - 'LICENSE'
-      - 'ACKNOWLEDGEMENTS'
-      - '**.md'
-      - '*.yml'
-  push:
-    branches:
-      - main
-    tags:
-      - 'v*.*.*'
-    paths-ignore:
-      - '.**'
-      - 'LICENSE'
-      - 'ACKNOWLEDGEMENTS'
-      - '**.md'
-      - '*.yml'
+  release:
+    types: [published]
+
+env:
+  ITCH_GAME: ""
+  ITCH_USER: ""
 
 jobs:
-  format_code:
-    name: "Format Code"
-    runs-on: ubuntu-latest
-    # To prevent infinite loops
-    if: "!contains(github.event.head_commit.message, 'Auto-Format GDScript')"
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          token: ${{ github.token }}
-
-      - uses: actions/setup-python@v3
-        with: 
-          python-version: 3.x
-
-      - run: pip3 install 'gdtoolkit==3.*'
-
-      - run: gdformat **/*.gd
-
-      - uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          commit_message: Auto-Format GDScript
-          file_pattern: "**/*.gd"
-
   build_game:
     name: Build Game
-    if: ${{ github.event.label.name != 'skip release' && !contains(github.event.head_commit.message, 'Auto-Format GDScript') }}
     runs-on: ubuntu-latest
     steps:
-      - name: checkout latest code
+      - name: Check out game repository
         uses: actions/checkout@v2.3.1
         with:
           fetch-depth: 0
-      - name: install wine
+      - name: Install Wine
         id: wine_install
         run: |
           sudo apt update
           sudo apt -y install wine64
           echo "WINE_PATH=$(which wine64)" >> $GITHUB_OUTPUT
-      - name: install binutils
+      - name: Install binutils
         id: binutils_install
         run: |
           sudo apt -y install binutils
-      - name: install osxcross
+      - name: Install osxcross
         id: osxcross_install
         uses: The-Water-Museum/setup-osxcross@v1.4
         with:
           osx-version: "13.0"
           sdk-url: "https://cdn.ctis.me/file/ctisme-cdn/files-pub/ext/water-museum/macos-sdk"
-      - name: export with Godot Engine and release on GitHub
-        id: export_game
+      - name: Build Game with Godot Engine
+        id: build
         uses: The-Water-Museum/godot-export@v4.6.0
         with:
           godot_executable_download_url: https://cdn.ctis.me/file/ctisme-cdn/files-pub/ext/water-museum/godot/Godot_v3.5.1-stable_linux_headless.64.zip
@@ -82,31 +44,77 @@ jobs:
           wine_path: ${{ steps.wine_install.outputs.WINE_PATH }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Save HTML5 build artifact
+      - name: Upload HTML5 build artifact
         uses: actions/upload-artifact@v3
         with:
           name: build-HTML5
-          path: ${{ steps.export_game.outputs.archive_directory }}/HTML5.zip
+          path: ${{ steps.build.outputs.archive_directory }}/HTML5.zip
           if-no-files-found: error
           retention-days: 7
-      - name: Save Windows build artifact
+      - name: Upload Windows build artifact
         uses: actions/upload-artifact@v3
         with:
           name: build-Windows
-          path: ${{ steps.export_game.outputs.archive_directory }}/Windows.zip
+          path: ${{ steps.build.outputs.archive_directory }}/Windows.zip
           if-no-files-found: error
           retention-days: 7
-      - name: Save Linux build artifact
+      - name: Upload Linux build artifact
         uses: actions/upload-artifact@v3
         with:
           name: build-Linux_X11
-          path: ${{ steps.export_game.outputs.archive_directory }}/Linux_X11.zip
+          path: ${{ steps.build.outputs.archive_directory }}/Linux_X11.zip
           if-no-files-found: error
           retention-days: 7
-      - name: Save macOS build artifact
+      - name: Upload macOS build artifact
         uses: actions/upload-artifact@v3
         with:
           name: build-macOS
-          path: ${{ steps.export_game.outputs.archive_directory }}/macOS.zip
+          path: ${{ steps.build.outputs.archive_directory }}/macOS.zip
           if-no-files-found: error
           retention-days: 7
+
+  release_itchio:
+      name: Upload Game to Itch.io
+      runs-on: ubuntu-latest
+      needs: [build_game]
+      steps:
+        - name: Download Game Build Atrifacts
+          uses: actions/download-artifact@v3.0.2
+          with:
+            path: builds/
+        - name: Deploy Windows build to itch.io
+          uses: The-Water-Museum/butler-publish-itchio-action@v1.0.3
+          env:
+            BUTLER_CREDENTIALS: ${{ secrets.ITCH_API_KEY }}
+            CHANNEL: windows
+            ITCH_GAME: ${{ env.ITCH_GAME }} 
+            ITCH_USER: ${{ env.ITCH_USER }}
+            PACKAGE: builds/build-Windows/Windows.zip
+            VERSION: ${{ github.event.release.tag_name }}
+        - name: Deploy HTML5 build to itch.io
+          uses: The-Water-Museum/butler-publish-itchio-action@v1.0.3
+          env:
+            BUTLER_CREDENTIALS: ${{ secrets.ITCH_API_KEY }}
+            CHANNEL: html
+            ITCH_GAME: ${{ env.ITCH_GAME }} 
+            ITCH_USER: ${{ env.ITCH_USER }}
+            PACKAGE: builds/build-HTML5/HTML5.zip
+            VERSION: ${{ github.event.release.tag_name }}
+        - name: Deploy macOS build to itch.io
+          uses: The-Water-Museum/butler-publish-itchio-action@v1.0.3
+          env:
+            BUTLER_CREDENTIALS: ${{ secrets.ITCH_API_KEY }}
+            CHANNEL: osx
+            ITCH_GAME: ${{ env.ITCH_GAME }} 
+            ITCH_USER: ${{ env.ITCH_USER }}
+            PACKAGE: builds/build-macOS/macOS.zip
+            VERSION: ${{ github.event.release.tag_name }}
+        - name: Deploy Linux build to itch.io
+          uses: The-Water-Museum/butler-publish-itchio-action@v1.0.3
+          env:
+            BUTLER_CREDENTIALS: ${{ secrets.ITCH_API_KEY }}
+            CHANNEL: linux
+            ITCH_GAME: ${{ env.ITCH_GAME }} 
+            ITCH_USER: ${{ env.ITCH_USER }}
+            PACKAGE: builds/build-Linux_X11/Linux_X11.zip
+            VERSION: ${{ github.event.release.tag_name }}
