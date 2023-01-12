@@ -67,7 +67,7 @@ jobs:
           sudo apt -y install binutils
       - name: install osxcross
         id: osxcross_install
-        uses: The-Water-Museum/setup-osxcross@e0996f00bb6e85476211c130196e5e46b781815c
+        uses: The-Water-Museum/setup-osxcross@v1.4
         with:
           osx-version: "13.0"
           sdk-url: "https://cdn.ctis.me/file/ctisme-cdn/files-pub/ext/water-museum/macos-sdk"
