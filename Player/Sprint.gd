@@ -1,6 +1,5 @@
 extends Node
 
-
 export var controller_path := NodePath("../")
 onready var controller: MovementController = get_node(controller_path)
 
@@ -24,5 +23,8 @@ func _physics_process(delta: float) -> void:
 
 
 func can_sprint() -> bool:
-	return (controller.is_on_floor() and Input.is_action_pressed("sprint") 
-			and controller.input_axis.x >= 0.5)
+	return (
+		controller.is_on_floor()
+		and Input.is_action_pressed("sprint")
+		and controller.input_axis.x >= 0.5
+	)
