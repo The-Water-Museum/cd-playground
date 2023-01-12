@@ -1,6 +1,5 @@
 extends Spatial
 
-
 export(NodePath) var cam_path := NodePath("Camera")
 onready var cam: Camera = get_node(cam_path)
 
@@ -29,6 +28,6 @@ func camera_rotation() -> void:
 	rot.y -= mouse_axis.x * mouse_sensitivity
 	# Vertical mouse look.
 	rot.x = clamp(rot.x - mouse_axis.y * mouse_sensitivity, -y_limit, y_limit)
-	
+
 	get_owner().rotation.y = rot.y
 	rotation.x = rot.x
