@@ -15,6 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run Build
-        uses: The-Water-Museum/godot-build@v1.0.0
+        uses: ./
         with: 
           version: ${{ github.event.release.tag_name }}
