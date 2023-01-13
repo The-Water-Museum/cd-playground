@@ -14,6 +14,7 @@ jobs:
     name: Build Game
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
       - name: Run Build
         uses: ./
         with: 
