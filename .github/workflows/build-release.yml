@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run Build
-        uses: The-Water-Museum/godot-build@v1.0
+        uses: The-Water-Museum/godot-build@v1
         with: 
           version: ${{ github.event.release.tag_name }}
 
@@ -25,7 +25,7 @@ jobs:
       needs: [build_game]
       steps:
         - name: Release Game
-          uses: The-Water-Museum/release-game/itch@v1.0
+          uses: The-Water-Museum/release-game/itch@v1
           with:
             itch-game: ${{ env.ITCH_GAME }}
             itch-user: ${{ env.ITCH_USER }}
@@ -38,7 +38,7 @@ jobs:
       needs: [build_game]
       steps:
         - name: Release Game
-          uses: The-Water-Museum/release-game/steam@v1.0
+          uses: The-Water-Museum/release-game/steam@v1
           with:
             steam-totp-shared-secret: ${{ secrets.STEAM_SHARED_SECRET }}
             steam-username: ${{ secrets.STEAM_USERNAME }}
