@@ -5,8 +5,9 @@ on:
     types: [published]
 
 env:
-  ITCH_GAME: ""
-  ITCH_USER: ""
+  ITCH_GAME: ${{ vars.ITCH_GAME }}
+  ITCH_USER: ${{ vars.ITCH_USER }}
+  STEAM_APP_ID: ${{ vars.STEAM_APP_ID }}
 
 jobs:
   build_game:
@@ -23,13 +24,13 @@ jobs:
           sudo apt update
           sudo apt -y install wine64
           echo "WINE_PATH=$(which wine64)" >> $GITHUB_OUTPUT
-      - name: Install binutils
+      - name: Install Build Tools
         id: binutils_install
         run: |
-          sudo apt -y install binutils
+          sudo apt -y install binutils build-essential
       - name: Install osxcross
         id: osxcross_install
-        uses: The-Water-Museum/setup-osxcross@40752aefa584b4f6f8f97c63b35db86fb48119dd
+        uses: The-Water-Museum/setup-osxcross@v1.5
         with:
           osx-version: "13.0"
           sdk-url: "https://cdn.ctis.me/file/ctisme-cdn/files-pub/ext/water-museum/macos-sdk"
@@ -78,7 +79,7 @@ jobs:
       runs-on: ubuntu-latest
       needs: [build_game]
       steps:
-        - name: Download Game Build Atrifacts
+        - name: Download Game Build Artifacts
           uses: actions/download-artifact@v3.0.2
           with:
             path: builds/
@@ -118,3 +119,31 @@ jobs:
             ITCH_USER: ${{ env.ITCH_USER }}
             PACKAGE: builds/build-Linux_X11/Linux_X11.zip
             VERSION: ${{ github.event.release.tag_name }}
+
+  release_steam:
+      name: Upload Game to Steam
+      runs-on: ubuntu-latest
+      needs: [build_game]
+      steps:
+        - name: Download Game Build Artifacts
+          uses: actions/download-artifact@v3.0.2
+          with:
+            path: builds/
+        - uses: The-Water-Museum/steam-totp@v1.0.3
+          name: Generate TOTP
+          id: steam-totp
+          with:
+            shared_secret: ${{ secrets.STEAM_SHARED_SECRET }}
+        - uses: The-Water-Museum/steam-deploy@v1.3.0
+          with:
+            username: ${{ secrets.STEAM_USERNAME }}
+            password: ${{ secrets.STEAM_PASSWORD }}
+            totp: ${{ steps.steam-totp.outputs.code }}
+            appId: ${{ env.STEAM_APP_ID }} 
+            buildDescription: ${{ github.event.release.tag_name }}
+            rootPath: builds
+            depot1Path: build-Windows
+            depot2Path: build-macOS
+            depot3Path: build-Linux_X11
+            releaseBranch: prerelease
+
