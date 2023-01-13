@@ -129,6 +129,10 @@ jobs:
           uses: actions/download-artifact@v3.0.2
           with:
             path: builds/
+        - name: Install libcurl 
+          id: libcurl_install
+          run: |
+            sudo apt -y install libcurl4-openssl-dev
         - uses: The-Water-Museum/steam-totp@v1.0.3
           name: Generate TOTP
           id: steam-totp
@@ -146,4 +150,3 @@ jobs:
             depot2Path: build-macOS
             depot3Path: build-Linux_X11
             releaseBranch: prerelease
-
