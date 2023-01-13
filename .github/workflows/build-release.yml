@@ -14,139 +14,34 @@ jobs:
     name: Build Game
     runs-on: ubuntu-latest
     steps:
-      - name: Check out game repository
-        uses: actions/checkout@v2.3.1
-        with:
-          fetch-depth: 0
-      - name: Install Wine
-        id: wine_install
-        run: |
-          sudo apt update
-          sudo apt -y install wine64
-          echo "WINE_PATH=$(which wine64)" >> $GITHUB_OUTPUT
-      - name: Install Build Tools
-        id: binutils_install
-        run: |
-          sudo apt -y install binutils build-essential
-      - name: Install osxcross
-        id: osxcross_install
-        uses: The-Water-Museum/setup-osxcross@v1.5
-        with:
-          osx-version: "13.0"
-          sdk-url: "https://cdn.ctis.me/file/ctisme-cdn/files-pub/ext/water-museum/macos-sdk"
-      - name: Build Game with Godot Engine
-        id: build
-        uses: The-Water-Museum/godot-export@v4.6.0
-        with:
-          godot_executable_download_url: https://cdn.ctis.me/file/ctisme-cdn/files-pub/ext/water-museum/godot/Godot_v3.5.1-stable_linux_headless.64.zip
-          godot_export_templates_download_url: https://cdn.ctis.me/file/ctisme-cdn/files-pub/ext/water-museum/godot/Godot_v3.5.1-stable_export_templates.tpz
-          relative_project_path: .
-          archive_output: true
-          wine_path: ${{ steps.wine_install.outputs.WINE_PATH }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload HTML5 build artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: build-HTML5
-          path: ${{ steps.build.outputs.archive_directory }}/HTML5.zip
-          if-no-files-found: error
-          retention-days: 7
-      - name: Upload Windows build artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: build-Windows
-          path: ${{ steps.build.outputs.archive_directory }}/Windows.zip
-          if-no-files-found: error
-          retention-days: 7
-      - name: Upload Linux build artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: build-Linux_X11
-          path: ${{ steps.build.outputs.archive_directory }}/Linux_X11.zip
-          if-no-files-found: error
-          retention-days: 7
-      - name: Upload macOS build artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: build-macOS
-          path: ${{ steps.build.outputs.archive_directory }}/macOS.zip
-          if-no-files-found: error
-          retention-days: 7
+      - name: Run Build
+        uses: The-Water-Museum/godot-build@v1.0
+        with: 
+          version: ${{ github.event.release.tag_name }}
 
   release_itchio:
       name: Upload Game to Itch.io
       runs-on: ubuntu-latest
       needs: [build_game]
       steps:
-        - name: Download Game Build Artifacts
-          uses: actions/download-artifact@v3.0.2
+        - name: Release Game
+          uses: The-Water-Museum/release-game/itch@v1.0
           with:
-            path: builds/
-        - name: Deploy Windows build to itch.io
-          uses: The-Water-Museum/butler-publish-itchio-action@v1.0.3
-          env:
-            BUTLER_CREDENTIALS: ${{ secrets.ITCH_API_KEY }}
-            CHANNEL: windows
-            ITCH_GAME: ${{ env.ITCH_GAME }} 
-            ITCH_USER: ${{ env.ITCH_USER }}
-            PACKAGE: builds/build-Windows/Windows.zip
-            VERSION: ${{ github.event.release.tag_name }}
-        - name: Deploy HTML5 build to itch.io
-          uses: The-Water-Museum/butler-publish-itchio-action@v1.0.3
-          env:
-            BUTLER_CREDENTIALS: ${{ secrets.ITCH_API_KEY }}
-            CHANNEL: html
-            ITCH_GAME: ${{ env.ITCH_GAME }} 
-            ITCH_USER: ${{ env.ITCH_USER }}
-            PACKAGE: builds/build-HTML5/HTML5.zip
-            VERSION: ${{ github.event.release.tag_name }}
-        - name: Deploy macOS build to itch.io
-          uses: The-Water-Museum/butler-publish-itchio-action@v1.0.3
-          env:
-            BUTLER_CREDENTIALS: ${{ secrets.ITCH_API_KEY }}
-            CHANNEL: osx
-            ITCH_GAME: ${{ env.ITCH_GAME }} 
-            ITCH_USER: ${{ env.ITCH_USER }}
-            PACKAGE: builds/build-macOS/macOS.zip
-            VERSION: ${{ github.event.release.tag_name }}
-        - name: Deploy Linux build to itch.io
-          uses: The-Water-Museum/butler-publish-itchio-action@v1.0.3
-          env:
-            BUTLER_CREDENTIALS: ${{ secrets.ITCH_API_KEY }}
-            CHANNEL: linux
-            ITCH_GAME: ${{ env.ITCH_GAME }} 
-            ITCH_USER: ${{ env.ITCH_USER }}
-            PACKAGE: builds/build-Linux_X11/Linux_X11.zip
-            VERSION: ${{ github.event.release.tag_name }}
+            itch-game: ${{ env.ITCH_GAME }}
+            itch-user: ${{ env.ITCH_USER }}
+            itch-api-key: ${{ secrets.ITCH_API_KEY }}
+            version: ${{ github.event.release.tag_name }}
 
   release_steam:
       name: Upload Game to Steam
       runs-on: ubuntu-latest
       needs: [build_game]
       steps:
-        - name: Download Game Build Artifacts
-          uses: actions/download-artifact@v3.0.2
+        - name: Release Game
+          uses: The-Water-Museum/release-game/steam@v1.0
           with:
-            path: builds/
-        - name: Install libcurl 
-          id: libcurl_install
-          run: |
-            sudo apt -y install libcurl4-openssl-dev
-        - uses: The-Water-Museum/steam-totp@v1.0.3
-          name: Generate TOTP
-          id: steam-totp
-          with:
-            shared_secret: ${{ secrets.STEAM_SHARED_SECRET }}
-        - uses: The-Water-Museum/steam-deploy@v1.3.0
-          with:
-            username: ${{ secrets.STEAM_USERNAME }}
-            password: ${{ secrets.STEAM_PASSWORD }}
-            totp: ${{ steps.steam-totp.outputs.code }}
-            appId: ${{ env.STEAM_APP_ID }} 
-            buildDescription: ${{ github.event.release.tag_name }}
-            rootPath: builds
-            depot1Path: build-Windows
-            depot2Path: build-macOS
-            depot3Path: build-Linux_X11
-            releaseBranch: prerelease
+            steam-totp-shared-secret: ${{ secrets.STEAM_SHARED_SECRET }}
+            steam-username: ${{ secrets.STEAM_USERNAME }}
+            steam-password: ${{ secrets.STEAM_PASSWORD }}
+            steam-appid: ${{ env.STEAM_APP_ID }}
+            version: ${{ github.event.release.tag_name }}
