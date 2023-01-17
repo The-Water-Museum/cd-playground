@@ -1,0 +1,26 @@
+name: Build and Release Beta Channel
+
+on:
+  release:
+    types: [published]
+
+env:
+  ITCH_GAME: ${{ vars.ITCH_GAME }}
+  ITCH_USER: ${{ vars.ITCH_USER }}
+  STEAM_APP_ID: ${{ vars.STEAM_APP_ID }}
+  BUILD_VERSION: ${{ github.event.release.tag_name }}-beta-${{ github.sha }}
+
+jobs:
+  build_game:
+    name: Build Game
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.release.tag_name, '-stable')"
+    steps:
+      - name: Run Build
+        uses: The-Water-Museum/build-godot@v1.1.0
+        with: 
+          version: ${{ env.BUILD_VERSION }}
+          channel: "beta"
+          godot-debug: true 
+          godot-verbose: true
+          artifact-retention-days: 2

@@ -1,0 +1,106 @@
+name: Build Branch Tip
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - Secondary
+    paths-ignore:
+      - '.**'
+      - 'LICENSE'
+      - 'ACKNOWLEDGEMENTS'
+      - '**.md'
+      - '**.yml'
+
+env:
+  ITCH_GAME: ${{ vars.ITCH_GAME }}
+  ITCH_USER: ${{ vars.ITCH_USER }}
+  STEAM_APP_ID: ${{ vars.STEAM_APP_ID }}
+  BUILD_VERSION: unstable-${{ github.sha }}
+
+jobs:
+  build_game:
+    name: Build Game
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out game repository
+        uses: actions/checkout@v2.3.1
+        with:
+          fetch-depth: 0
+      - name: Install Wine
+        shell: bash
+        id: wine_install
+        run: |
+          sudo apt update
+          sudo apt -y install wine64
+          echo "WINE_PATH=$(which wine64)" >> $GITHUB_OUTPUT
+      - name: Install Build Tools
+        shell: bash
+        id: binutils_install
+        run: |
+          sudo apt -y install binutils build-essential libssl-dev p7zip-full
+      - name: Install osxcross
+        id: osxcross_install
+        uses: The-Water-Museum/setup-osxcross@v1.5
+        with:
+          osx-version: "13.0"
+          sdk-url: "https://cdn.ctis.me/file/ctisme-cdn/files-pub/ext/water-museum/macos-sdk"
+          debug: true
+      - name: "Apply base build configurations"
+        shell: bash
+        run: |
+            # Overwrite export presets with alternate tip build config
+            cp buildcfgs/export_presets_tipbuild.cfg export_presets.cfg
+            cp buildcfgs/override_presets.cfg override.cfg
+      - name: Get date
+        shell: bash
+        run: |
+            echo "BUILD_DATE=$(date --rfc-3339=date)" >> ${GITHUB_ENV}
+      - name: "Embed build version metadata"
+        shell: bash
+        run: |
+            sed -i 's/application\/file_description=".*"/application\/file_description="${{ env.BUILD_VERSION }}-${{ env.BUILD_DATE }}"/g' ./export_presets.cfg
+            sed -i 's/application\/file_version=".*"/application\/file_version="${{ env.BUILD_VERSION }}-${{ env.BUILD_DATE }}"/g' ./export_presets.cfg
+            sed -i 's/application\/product_version=".*"/application\/product_version="${{ env.BUILD_VERSION }}-${{ env.BUILD_DATE }}"/g' ./export_presets.cfg
+            sed -i 's/application\/short_version=".*"/application\/short_version="${{ env.BUILD_VERSION }}-${{ env.BUILD_DATE }}"/g' ./export_presets.cfg
+            sed -i 's/application\/version=".*"/application\/version="${{ env.BUILD_VERSION }}-${{ env.BUILD_DATE }}"/g' ./export_presets.cfg
+            sed -i 's/application\/info=".*"/application\/info="${{ env.BUILD_VERSION }}-${{ env.BUILD_DATE }}"/g' ./export_presets.cfg
+      - name: "Embed build config overrides"
+        shell: bash
+        run: |
+            sed -i 's/build\/version=".*"/build\/version="${{ env.BUILD_VERSION }}-${{ env.BUILD_DATE }}"/g' ./override.cfg
+            sed -i 's/build\/date=".*"/build\/date="${{ env.BUILD_DATE }}"/g' ./override.cfg
+            sed -i 's/build\/commit_sha=".*"/build\/commit_sha="${{ github.sha }}"/g' ./override.cfg
+            sed -i 's/build\/channel=".*"/build\/channel="unstable"/g' ./override.cfg
+      - name: Override application title with version info for non-stable releases
+        shell: bash
+        run: |
+            echo '' >>./override.cfg
+            echo "[application]" >>./override.cfg
+            echo 'config/name="${{ env.BUILD_VERSION }}-${{ env.BUILD_DATE }}"' >>./override.cfg
+      - name: Build Game with Godot Engine
+        id: build
+        uses: The-Water-Museum/godot-export@v4.6.0
+        with:
+          godot_executable_download_url: "https://cdn.ctis.me/file/ctisme-cdn/files-pub/ext/water-museum/godot/Godot_v3.5.1-stable_linux_headless.64.zip"
+          godot_export_templates_download_url: "https://cdn.ctis.me/file/ctisme-cdn/files-pub/ext/water-museum/godot/Godot_v3.5.1-stable_export_templates.tpz"
+          relative_project_path: .
+          archive_output: true
+          wine_path: ${{ steps.wine_install.outputs.WINE_PATH }}
+          export_debug: true
+          verbose: true
+      - name: Upload Windows build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-Windows
+          path: ${{ steps.build.outputs.archive_directory }}/Windows.zip
+          if-no-files-found: error
+          retention-days: 1
+      - name: Upload macOS build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-macOS
+          path: ${{ steps.build.outputs.archive_directory }}/macOS.zip
+          if-no-files-found: error
+          retention-days: 1

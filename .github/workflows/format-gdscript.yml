@@ -11,17 +11,6 @@ on:
       - 'ACKNOWLEDGEMENTS'
       - '**.md'
       - '*.yml'
-  push:
-    branches:
-      - main
-    tags:
-      - 'v*.*.*'
-    paths-ignore:
-      - '.**'
-      - 'LICENSE'
-      - 'ACKNOWLEDGEMENTS'
-      - '**.md'
-      - '*.yml'
 
 jobs:
   format_code:

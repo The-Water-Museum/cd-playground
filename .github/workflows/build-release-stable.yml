@@ -1,0 +1,24 @@
+name: Build and Release Stable Channel
+
+on:
+  release:
+    types: [published]
+
+env:
+  ITCH_GAME: ${{ vars.ITCH_GAME }}
+  ITCH_USER: ${{ vars.ITCH_USER }}
+  STEAM_APP_ID: ${{ vars.STEAM_APP_ID }}
+  BUILD_VERSION: ${{ github.event.release.tag_name }}
+
+jobs:
+  build_game:
+    name: Build Game
+    runs-on: ubuntu-latest
+    if: "contains(github.event.release.tag_name, '-stable')"
+    steps:
+      - name: Run Build
+        uses: The-Water-Museum/build-godot@v1.1.0
+        with: 
+          version: ${{ env.BUILD_VERSION }}
+          channel: "release"
+          artifact-retention-days: 3
