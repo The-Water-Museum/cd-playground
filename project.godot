@@ -26,10 +26,10 @@ config/icon="res://icon.png"
 
 [build]
 
-build/version="unknown"
-build/date="unknown"
-build/commit_sha="unknown"
-build/channel="unknown"
+info/version="unknown"
+info/date="unknown"
+info/commit_sha="unknown"
+info/channel="unknown"
 
 [gui]
 

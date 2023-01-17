@@ -14,6 +14,11 @@ func _ready() -> void:
 	
 	if !OS.is_debug_build():
 		fast_close = false
+		
+	if OS.is_debug_build():
+		print("BUILD INFO: Currently running a debug build")
+	
+	print("BUILD INFO: {name} version:{vers} date:{date} commit_sha:{sha} channel:{chan}".format({"name": ProjectSettings.get_setting("application/config/name"), "vers": ProjectSettings.get_setting("build/info/version"), "date": ProjectSettings.get_setting("build/info/date"), "sha": ProjectSettings.get_setting("build/info/commit_sha"), "chan": ProjectSettings.get_setting("build/info/channel")}))
 	
 	if fast_close:
 		print("** Fast Close enabled in the 'L_Main.gd' script **")
