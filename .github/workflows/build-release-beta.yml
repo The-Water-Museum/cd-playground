@@ -23,4 +23,5 @@ jobs:
           channel: "beta"
           godot-debug: true 
           godot-verbose: true
+          godot-encrypt-scripts: true
           artifact-retention-days: 2
