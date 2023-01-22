@@ -21,4 +21,5 @@ jobs:
         with: 
           version: ${{ env.BUILD_VERSION }}
           channel: "release"
+          godot-encrypt-scripts: true
           artifact-retention-days: 3
